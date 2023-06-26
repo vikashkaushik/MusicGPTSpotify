@@ -1,4 +1,4 @@
-from flask import Flask, request, url_for, session, redirect
+from flask import Flask, request, url_for, session, redirect, render_template
 import spotipy  
 from spotipy.oauth2 import SpotifyOAuth  
 from spotipy import Spotify  
@@ -24,7 +24,9 @@ def redirectPage():
     token_info = sp_oauth.get_access_token(code)
 
     session[TOKEN_INFO] = token_info
-    return redirect(url_for('getTracks', _external=True))
+    return render_template(("index.html"))
+
+    # return redirect(url_for('getTracks', _external=True))
 
 @app.route('/getTracks')
 def getTracks():
@@ -32,10 +34,20 @@ def getTracks():
         token_info = get_token()
     except:
         print("user not logged in")
-        redirect(url_for('login', _external=False))
-        
+        #redirect("/")
+        return redirect(url_for('login', _external=False))
+    
     sp = spotipy.Spotify(auth=token_info['access_token'])
-    return sp.current_user_saved_tracks(limit=50, offset=0)
+    all_songs = []
+    iteration = 0
+    while True:
+        items = (sp.current_user_saved_tracks(limit=50, offset=iteration*50)['items'])
+        iteration += 1
+        all_songs += items
+        if(len(items) < 50): 
+            break
+    return str(len(all_songs))
+    # return "Some Drake songs or something"
     
 
 
@@ -49,7 +61,7 @@ def get_token():
     if (is_expired):
         sp_oauth = create_spotify_oauth()
         token_info = sp_oauth.refresh_access_token(token_info['refresh_token'])
-        return token_info
+    return token_info
 
 def create_spotify_oauth():
     return SpotifyOAuth(
