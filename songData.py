@@ -24,7 +24,7 @@ def redirectPage():
     token_info = sp_oauth.get_access_token(code)
 
     session[TOKEN_INFO] = token_info
-    return render_template(("index.html"))
+    return render_template(("index.html"))      # hi
 
     # return redirect(url_for('getTracks', _external=True))
 
