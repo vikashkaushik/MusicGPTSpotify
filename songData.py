@@ -48,7 +48,6 @@ def getTracks():
             break
     return str(len(all_songs))
     # return "Some Drake songs or something"
-    
 
 
 def get_token():
