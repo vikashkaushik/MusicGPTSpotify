@@ -6,7 +6,7 @@ import time
 import openai
 import json
 
-openai.api_key = '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'
+openai.api_key = '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'
 app = Flask(__name__)
 
 app.secret_key = "fdskjfdsnsdk"
@@ -31,7 +31,7 @@ def redirectPage():
 
     # return redirect(url_for('getTracks', _external=True))
 
-def getTopItems(type, time_range):
+def getTopItems(type, time_range, limit):
     try:
         token_info = get_token()
     except:
@@ -43,7 +43,7 @@ def getTopItems(type, time_range):
     
     top_songs = {
 
-        "song": "power by kanye"
+        "song": "The Great Gig in the Sky, Pink Floyd"
     }
     return json.dumps(top_songs)
 
@@ -65,10 +65,13 @@ def getMessage():
                         "type": "string",
                         "enum": ["artists", "songs"]
                     },
-                    "time_range": {"type": "string", "enum": ["long_term", "medium_term", "short_term"]}
-                    
+                    "time_range": {"type": "string", "enum": ["long_term", "medium_term", "short_term"], "defaultValue": "medium_term",},
+                    "limit": {
+                        "type": "integer",
+                        "description": "The number of tracks the user wants to display",
+                        "defaultValue": 20
+                    }, 
                 },
-                "required": ["type"]
             },
         },
         {
@@ -79,24 +82,18 @@ def getMessage():
                 "properties": {
                     "limit": {
                         "type": "integer",
-                        "description": "The number of tracks the user wants to display"
-                    },
-                    "offset": {
-                        "type": "integer",
-                        "nullable": "true",
-                        "defaultValue": 0
-
+                        "description": "The number of tracks the user wants to display",
+                        "defaultValue": 20
                     }
                 }
             },
-            "required": ["limit"]
 
         }
     ]
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo-0613",
         messages=messages,
-        functions=[getTopItems,getSavedTracks],
+        functions=functions,
         function_call="auto",  # auto is default, but we'll be explicit
     )
     response_message = response["choices"][0]["message"]
@@ -140,7 +137,7 @@ def getMessage():
 
 
 
-def getSavedTracks(limit, offset):
+def getSavedTracks(limit):
     try:
         token_info = get_token()
     except:
@@ -152,10 +149,10 @@ def getSavedTracks(limit, offset):
     all_songs = []
     iteration = 0
     while True:
-        items = (sp.current_user_saved_tracks(limit, offset)['items'])
+        items = (sp.current_user_saved_tracks(limit, 0)['items'][iteration]['track']['name'])
         iteration += 1
-        all_songs += items
-        if(len(items) < limit): 
+        all_songs.append(items)
+        if(iteration >= limit): 
             break
     return json.dumps(all_songs)
     # return "Some Drake songs or something"
