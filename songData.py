@@ -3,7 +3,10 @@ import spotipy
 from spotipy.oauth2 import SpotifyOAuth  
 from spotipy import Spotify  
 import time
+import openai
+import json
 
+openai.api_key = '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'
 app = Flask(__name__)
 
 app.secret_key = "fdskjfdsnsdk"
@@ -28,8 +31,119 @@ def redirectPage():
 
     # return redirect(url_for('getTracks', _external=True))
 
-@app.route('/getTracks')
-def getTracks():
+def getTopItems(type, time_range):
+    try:
+        token_info = get_token()
+    except:
+        print("user not logged in")
+        #redirect("/")
+        return redirect(url_for('login', _external=False))
+    
+    sp = spotipy.Spotify(auth=token_info['access_token'])
+    
+    top_songs = {
+
+        "song": "the great gig in the sky, Pink Floyd",
+    }
+    return json.dumps(top_songs)
+
+
+@app.route('/getMessage', methods = ['POST'])
+def getMessage():
+    input = request.form.get("data")
+    print("the input is" + input)
+    messages = [{"role": "user", "content": input}]
+    functions = [
+        {
+            "name": "getTopItems",
+            "description": "Get user's top items",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "type": {
+                        "type": "string",
+                        "enum": ["artists", "songs"]
+                    },
+                    "time_range": {"type": "string", "enum": ["long_term", "medium_term", "short_term"]}
+                },
+                "required": ["location"],
+            },
+        },
+        {
+            "name": "getSavedTracks",
+            "description": "Get the user's current saved tracks",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "limit": {
+                        "type": "integer",
+                        "description": "The number of tracks the user wants to display"
+                    },
+                    "offset": {
+                        "type": "integer",
+                        "nullable": "true",
+                        "defaultValue": 0
+
+                    }
+                }
+            },
+            "required": ["limit"]
+
+        }
+    ]
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo-0613",
+        messages=messages,
+        functions=functions,
+        function_call="auto",  # auto is default, but we'll be explicit
+    )
+    response_message = response["choices"][0]["message"]
+    # Step 2: check if GPT wanted to call a function
+
+    if response_message.get("function_call"):
+        print("hi")
+        # Step 3: call the function
+        # Note: the JSON response may not always be valid; be sure to handle errors
+        available_functions = {
+            "getTopItems": getTopItems,
+            "getSavedTracks": getSavedTracks
+        }  # only one function in this example, but you can have multiple
+        function_name = response_message["function_call"]["name"]
+        function_to_call = available_functions[function_name]
+        function_args = json.loads(response_message["function_call"]["arguments"])
+        function_response = function_to_call(
+            type = function_args.get("type"),
+            time_range = function_args.get("time_range")
+        )
+
+        # Step 4: send the info on the function call and function response to GPT
+        messages.append(response_message)  # extend conversation with assistant's reply
+        messages.append(
+            {
+                "role": "function",
+                "name": function_name,
+                "content": function_response,
+            }
+        )  # extend conversation with function response
+        second_response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo-0613",
+            messages=messages,
+        )  # get a new response from GPT where it can see the function response
+        print(second_response)
+        return second_response["choices"][0]["message"]
+    print(response_message)
+
+    return response_message
+
+
+
+
+
+def getSavedTracks(limit, offset):
+    if offset:
+        None
+    else:
+        offset = 0
     try:
         token_info = get_token()
     except:
@@ -41,12 +155,12 @@ def getTracks():
     all_songs = []
     iteration = 0
     while True:
-        items = (sp.current_user_saved_tracks(limit=50, offset=iteration*50)['items'])
+        items = (sp.current_user_saved_tracks(limit, offset)['items'])
         iteration += 1
         all_songs += items
         if(len(items) < 50): 
             break
-    return str(len(all_songs))
+    return str((all_songs))
     # return "Some Drake songs or something"
 
 
