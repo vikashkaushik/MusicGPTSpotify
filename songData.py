@@ -6,7 +6,7 @@ import time
 import openai
 import json
 
-openai.api_key = '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'
+openai.api_key = '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'
 app = Flask(__name__)
 
 app.secret_key = "fdskjfdsnsdk"
@@ -31,7 +31,7 @@ def redirectPage():
 
     # return redirect(url_for('getTracks', _external=True))
 
-def getTopItems(type, time_range):
+def getTopItems(type, time_range="medium_term", limit=5):
     try:
         token_info = get_token()
     except:
@@ -40,11 +40,15 @@ def getTopItems(type, time_range):
         return redirect(url_for('login', _external=False))
     
     sp = spotipy.Spotify(auth=token_info['access_token'])
-    
-    top_songs = {
-
-        "song": "power by kanye"
-    }
+    top_songs = []
+    iteration = 0
+    while True:
+        items = (sp.current_user_top_tracks(limit, 0, time_range)['items'][iteration]['track']['name'])
+        print(items)
+        iteration += 1
+        top_songs.append(items)
+        if(iteration >= limit): 
+            break
     return json.dumps(top_songs)
 
 
@@ -63,12 +67,16 @@ def getMessage():
                 "properties": {
                     "type": {
                         "type": "string",
-                        "enum": ["artists", "songs"]
+                        "enum": ["artists", "songs"],
                     },
-                    "time_range": {"type": "string", "enum": ["long_term", "medium_term", "short_term"]}
+                    "time_range": {"type": "string", "enum": ["long_term", "medium_term", "short_term"], "defaultValue": "medium_term",},
+                    "limit": {
+                        "type": "integer",
+                        "description": "The number of tracks the user wants to display",
+                        "defaultValue": 20
+                    },
                     
                 },
-                "required": ["type"]
             },
         },
         {
@@ -79,24 +87,18 @@ def getMessage():
                 "properties": {
                     "limit": {
                         "type": "integer",
-                        "description": "The number of tracks the user wants to display"
+                        "description": "The number of tracks the user wants to display",
+                        "defaultValue": 20
                     },
-                    "offset": {
-                        "type": "integer",
-                        "nullable": "true",
-                        "defaultValue": 0
-
-                    }
-                }
+                },
             },
-            "required": ["limit"]
 
         }
     ]
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo-0613",
         messages=messages,
-        functions=[getTopItems,getSavedTracks],
+        functions=functions,
         function_call="auto",  # auto is default, but we'll be explicit
     )
     response_message = response["choices"][0]["message"]
@@ -113,9 +115,7 @@ def getMessage():
         function_name = response_message["function_call"]["name"]
         function_to_call = available_functions[function_name]
         kwargs = json.loads(response_message["function_call"]["arguments"])
-        function_response = function_to_call(
-            **kwargs
-        )
+        function_response = function_to_call(**kwargs)
 
         # Step 4: send the info on the function call and function response to GPT
         messages.append(response_message)  # extend conversation with assistant's reply
@@ -131,6 +131,7 @@ def getMessage():
             messages=messages,
         )  # get a new response from GPT where it can see the function response
         print(second_response)
+        
         return second_response["choices"][0]["message"]
     print(response_message)
     
@@ -140,7 +141,7 @@ def getMessage():
 
 
 
-def getSavedTracks(limit, offset):
+def getSavedTracks(limit=5):
     try:
         token_info = get_token()
     except:
@@ -152,10 +153,11 @@ def getSavedTracks(limit, offset):
     all_songs = []
     iteration = 0
     while True:
-        items = (sp.current_user_saved_tracks(limit, offset)['items'])
+        items = (sp.current_user_saved_tracks(limit, 0)['items'][iteration]['track']['name'])
+        print(items)
         iteration += 1
-        all_songs += items
-        if(len(items) < limit): 
+        all_songs.append(items)
+        if(iteration >= limit): 
             break
     return json.dumps(all_songs)
     # return "Some Drake songs or something"
@@ -180,13 +182,3 @@ def create_spotify_oauth():
             redirect_uri=url_for('redirectPage', _external=True),
               scope="user-library-read"
     )
-# # Create a playlist  
-# playlist_name = "My new playlist"  
-# sp.user_playlist_create("USERNAME", playlist_name)  
-  
-# #Add tracks to the playlist  
-# track_ids = ['4uLU6hMCjMI75M1A2tKUQC', '1301WleyT98MSxVHPZCA6M']  
-# sp.user_playlist_add_tracks("USERNAME", playlist_id, track_ids)  
-  
-# # Retrieve all the playlists of a user  
-# playlists = sp.user_playlists("USERNAME")  
