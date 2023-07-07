@@ -6,7 +6,7 @@ import time
 import openai
 import json
 
-openai.api_key = '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'
+openai.api_key = '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'
 app = Flask(__name__)
 
 app.secret_key = "fdskjfdsnsdk"
@@ -43,13 +43,14 @@ def getTopItems(type, time_range):
     
     top_songs = {
 
-        "song": "the great gig in the sky, Pink Floyd",
+        "song": "power by kanye"
     }
     return json.dumps(top_songs)
 
 
 @app.route('/getMessage', methods = ['POST'])
 def getMessage():
+    print("HI")
     input = request.form.get("data")
     print("the input is" + input)
     messages = [{"role": "user", "content": input}]
@@ -65,8 +66,9 @@ def getMessage():
                         "enum": ["artists", "songs"]
                     },
                     "time_range": {"type": "string", "enum": ["long_term", "medium_term", "short_term"]}
+                    
                 },
-                "required": ["location"],
+                "required": ["type"]
             },
         },
         {
@@ -94,7 +96,7 @@ def getMessage():
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo-0613",
         messages=messages,
-        functions=functions,
+        functions=[getTopItems,getSavedTracks],
         function_call="auto",  # auto is default, but we'll be explicit
     )
     response_message = response["choices"][0]["message"]
@@ -110,10 +112,9 @@ def getMessage():
         }  # only one function in this example, but you can have multiple
         function_name = response_message["function_call"]["name"]
         function_to_call = available_functions[function_name]
-        function_args = json.loads(response_message["function_call"]["arguments"])
+        kwargs = json.loads(response_message["function_call"]["arguments"])
         function_response = function_to_call(
-            type = function_args.get("type"),
-            time_range = function_args.get("time_range")
+            **kwargs
         )
 
         # Step 4: send the info on the function call and function response to GPT
@@ -132,7 +133,7 @@ def getMessage():
         print(second_response)
         return second_response["choices"][0]["message"]
     print(response_message)
-
+    
     return response_message
 
 
@@ -140,10 +141,6 @@ def getMessage():
 
 
 def getSavedTracks(limit, offset):
-    if offset:
-        None
-    else:
-        offset = 0
     try:
         token_info = get_token()
     except:
@@ -158,9 +155,9 @@ def getSavedTracks(limit, offset):
         items = (sp.current_user_saved_tracks(limit, offset)['items'])
         iteration += 1
         all_songs += items
-        if(len(items) < 50): 
+        if(len(items) < limit): 
             break
-    return str((all_songs))
+    return json.dumps(all_songs)
     # return "Some Drake songs or something"
 
 
