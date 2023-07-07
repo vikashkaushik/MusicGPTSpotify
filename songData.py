@@ -31,7 +31,7 @@ def redirectPage():
 
     # return redirect(url_for('getTracks', _external=True))
 
-def getTopItems(type, time_range, limit):
+def getTopItems(type, time_range="medium_term", limit=5):
     try:
         token_info = get_token()
     except:
@@ -41,10 +41,22 @@ def getTopItems(type, time_range, limit):
     
     sp = spotipy.Spotify(auth=token_info['access_token'])
     
-    top_songs = {
-
-        "song": "The Great Gig in the Sky, Pink Floyd"
-    }
+    top_songs = []
+    iteration = 0
+    while True:
+        if(type == "artists"):
+            items = (sp.current_user_top_artists(limit, 0, time_range)['items'][iteration]['name'])
+            print(items)
+            iteration += 1
+            top_songs.append(items)
+            if(iteration >= limit):
+                break
+        elif(type == "songs"):
+            items = (sp.current_user_top_tracks(limit, 0, time_range)['items'][iteration]['name'])
+            iteration += 1
+            top_songs.append(items)
+            if(iteration >= limit):
+                break
     return json.dumps(top_songs)
 
 
@@ -65,7 +77,7 @@ def getMessage():
                         "type": "string",
                         "enum": ["artists", "songs"]
                     },
-                    "time_range": {"type": "string", "enum": ["long_term", "medium_term", "short_term"], "defaultValue": "medium_term",},
+                    "time_range": {"type": "string", "enum": ["long_term", "medium_term", "short_term"], "defaultValue": "medium_term"},
                     "limit": {
                         "type": "integer",
                         "description": "The number of tracks the user wants to display",
@@ -172,10 +184,10 @@ def get_token():
 
 def create_spotify_oauth():
     return SpotifyOAuth(
-        client_id="6ccc82325a60410c9d0bbc5a7014537e",
-          client_secret="5cac035e1acb4ba4acc94f014ee768ad",
+        client_id="04dd3a00e6a04c8ab85ca26fd6477f72",
+          client_secret="2bbff5ae6b4a4d1a83144a4983a693d9",
             redirect_uri=url_for('redirectPage', _external=True),
-              scope="user-library-read"
+              scope="user-library-read user-top-read"
     )
 # # Create a playlist  
 # playlist_name = "My new playlist"  
