@@ -31,7 +31,18 @@ def redirectPage():
 
     # return redirect(url_for('getTracks', _external=True))
 
-def getTopItems(type, time_range="medium_term", limit=5):
+def getTopItems(**kwargs):
+    if(not kwargs.get("time_range")):
+        time_range = "medium_term"
+    else:
+        time_range = kwargs.get("time_range")
+    
+    if(not kwargs.get("limit")):
+        limit = 5
+    else:
+        limit = kwargs.get("limit")
+    
+    type = kwargs.get("type")
     try:
         token_info = get_token()
     except:
@@ -46,12 +57,13 @@ def getTopItems(type, time_range="medium_term", limit=5):
     while True:
         if(type == "artists"):
             items = (sp.current_user_top_artists(limit, 0, time_range)['items'][iteration]['name'])
-            print(items)
             iteration += 1
             top_songs.append(items)
             if(iteration >= limit):
                 break
         elif(type == "songs"):
+            print(sp.current_user_top_artists(limit, 0, time_range)['items'])
+
             items = (sp.current_user_top_tracks(limit, 0, time_range)['items'][iteration]['name'])
             iteration += 1
             top_songs.append(items)
@@ -59,6 +71,54 @@ def getTopItems(type, time_range="medium_term", limit=5):
                 break
     return json.dumps(top_songs)
 
+def getRecs(**kwargs):
+    if(not kwargs.get("time_range")):
+        time_range = "medium_term"
+    else:
+        time_range = kwargs.get("time_range")
+    
+    if(not kwargs.get("limit")):
+        limit = 5
+    else:
+        limit = kwargs.get("limit")
+    
+    type = kwargs.get("type")
+
+    try:
+        token_info = get_token()
+    except:
+        print("user not logged in")
+        #redirect("/")
+        return redirect(url_for('login', _external=False))
+    
+    sp = spotipy.Spotify(auth=token_info['access_token'])
+
+    seeds = []
+    iteration = 0
+    values = []
+    while True:
+        if(type == "artists"):
+            items = (sp.current_user_top_artists(limit, 0, time_range)['items'][iteration]['id'])
+            iteration += 1
+            seeds.append(items)
+            if(iteration >= limit):
+                values = sp.recommendations(seed_artists = seeds, limit=5)
+                break
+        elif(type == "songs"):
+            items = (sp.current_user_top_tracks(limit, 0, time_range)['items'][iteration]['id'])
+            iteration += 1
+            seeds.append(items)
+            if(iteration >= limit):
+                values = sp.recommendations(seed_tracks = seeds, limit=5)
+                break
+    count = 0
+    res = []
+    while count < 5:
+        print(values['tracks'][count]['name'] + "   HIIIHIHIHIH")
+        res.append(values['tracks'][count]['name'])
+        count += 1
+    print(res)
+    return json.dumps(res)
 
 @app.route('/getMessage', methods = ['POST'])
 def getMessage():
@@ -100,6 +160,24 @@ def getMessage():
                 }
             },
 
+        },
+        {
+            "name": "getRecommendations",
+            "description": "Gets recommendations for the user based on his top songs",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "type": {
+                        "type": "string",
+                        "enum": ["artists", "songs"]
+                    },
+                    "time_range": {"type": "string", "enum": ["long_term", "medium_term", "short_term"], "defaultValue": "medium_term"},
+                    "limit": {
+                        "type": "integer",
+                        "description": "The number of seed items the user wants to get recommendations based on"
+                    }
+                }
+            }
         }
     ]
     response = openai.ChatCompletion.create(
@@ -117,7 +195,8 @@ def getMessage():
         # Note: the JSON response may not always be valid; be sure to handle errors
         available_functions = {
             "getTopItems": getTopItems,
-            "getSavedTracks": getSavedTracks
+            "getSavedTracks": getSavedTracks,
+            "getRecommendations": getRecs
         }  # only one function in this example, but you can have multiple
         function_name = response_message["function_call"]["name"]
         function_to_call = available_functions[function_name]
@@ -149,7 +228,12 @@ def getMessage():
 
 
 
-def getSavedTracks(limit):
+def getSavedTracks(**kwargs):
+
+    if(not kwargs.get("limit")):
+        limit = 5
+    else:
+        limit = kwargs.get("limit")
     try:
         token_info = get_token()
     except:
