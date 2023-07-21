@@ -19,6 +19,7 @@ def login():
     auth_url = sp_oauth.get_authorize_url()
     return redirect(auth_url)
 
+#
 @app.route('/redirect')
 def redirectPage():
     sp_oauth = create_spotify_oauth()
