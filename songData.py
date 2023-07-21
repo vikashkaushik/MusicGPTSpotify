@@ -82,7 +82,6 @@ def getRecs(**kwargs):
     else:
         limit = kwargs.get("limit")
     
-    type = kwargs.get("type")
 
     try:
         token_info = get_token()
@@ -93,32 +92,67 @@ def getRecs(**kwargs):
     
     sp = spotipy.Spotify(auth=token_info['access_token'])
 
-    seeds = []
+    # seeds = []
+    # iteration = 0
+    # values = []
+    # while True:
+    #     if(type == "artists"):
+    #         items = (sp.current_user_top_artists(limit, 0, time_range)['items'][iteration]['id'])
+    #         iteration += 1
+    #         seeds.append(items)
+    #         if(iteration >= limit):
+    #             values = sp.recommendations(seed_artists = seeds, limit=5)
+    #             break
+    #     elif(type == "songs"):
+    #         items = (sp.current_user_top_tracks(limit, 0, time_range)['items'][iteration]['id'])
+    #         print(sp.current_user_top_tracks(limit, 0, time_range)['items'][iteration]['name'])
+    #         iteration += 1
+    #         seeds.append(items)
+    #         if(iteration >= limit):
+    #             values = sp.recommendations(seed_tracks = seeds, limit=5)
+    #             break
+    recommendationsArray = []
+    print(limit)
+    top_artists = []
+    top_tracks = []
     iteration = 0
-    values = []
     while True:
-        if(type == "artists"):
-            items = (sp.current_user_top_artists(limit, 0, time_range)['items'][iteration]['id'])
-            iteration += 1
-            seeds.append(items)
-            if(iteration >= limit):
-                values = sp.recommendations(seed_artists = seeds, limit=5)
-                break
-        elif(type == "songs"):
-            items = (sp.current_user_top_tracks(limit, 0, time_range)['items'][iteration]['id'])
-            iteration += 1
-            seeds.append(items)
-            if(iteration >= limit):
-                values = sp.recommendations(seed_tracks = seeds, limit=5)
-                break
+        top_artists.append(sp.current_user_top_artists(limit, 0, time_range)['items'][iteration]['id'])
+        top_tracks.append(sp.current_user_top_tracks(limit, 0, time_range)['items'][iteration]['id'])
+        iteration +=1
+        if(iteration >= 2):
+            break
+    
+    # top_artists = sp.current_user_top_artists(limit, 0, time_range)['items']
+    # top_tracks = sp.current_user_top_tracks(limit, 0, time_range)['items']
+    genre_ids = sp.recommendation_genre_seeds()
+    
+    items = sp.recommendations(
+        seed_artists=top_artists,
+        seed_genres=genre_ids,
+        seed_tracks=top_tracks,
+        limit=limit
+    )
+    
+
     count = 0
-    res = []
-    while count < 5:
-        print(values['tracks'][count]['name'] + "   HIIIHIHIHIH")
-        res.append(values['tracks'][count]['name'])
+    while count < limit:
+        recommendationsArray.append(items['tracks'][count]['name'])
         count += 1
-    print(res)
-    return json.dumps(res)
+    
+    return json.dumps(recommendationsArray)
+
+
+
+    
+    # count = 0
+    # res = []
+    # while count < 5:
+    #     print(values['tracks'][count]['name'] + "   HIIIHIHIHIH")
+    #     res.append(values['tracks'][count]['name'])
+    #     count += 1
+    # print(res)
+    # return json.dumps(res)
 
 @app.route('/getMessage', methods = ['POST'])
 def getMessage():
@@ -167,14 +201,15 @@ def getMessage():
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "type": {
-                        "type": "string",
-                        "enum": ["artists", "songs"]
-                    },
+                    
                     "time_range": {"type": "string", "enum": ["long_term", "medium_term", "short_term"], "defaultValue": "medium_term"},
                     "limit": {
                         "type": "integer",
                         "description": "The number of seed items the user wants to get recommendations based on"
+                    },
+                    "genres": {
+                        "type": "string",
+                        "description": "The genres that the user wants to get recommendations of"
                     }
                 }
             }
