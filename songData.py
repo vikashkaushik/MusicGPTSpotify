@@ -7,7 +7,7 @@ import time
 import openai
 import json
 
-openai.api_key = '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'
+openai.api_key = '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'
 app = Flask(__name__)
 
 app.secret_key = "fdskjfdsnsdk"
@@ -217,8 +217,13 @@ def addToPlaylist(**kwargs):
         if 'tracks' in search_result and search_result['tracks']['items']:
             song_id = search_result['tracks']['items'][0]['id']
         
-    sp.user_playlist_add_tracks("6b7d1l6gp9d374xkuxlbu454j", playlist_id, [song_id])
+    if playlist_id and song_id:
+        sp.user_playlist_add_tracks("6b7d1l6gp9d374xkuxlbu454j", playlist_id, [song_id])
+        return "The song has been added to the playlist successfully."
 
+    
+
+    return "Error: Either playlist or song not found."
 
     # count = 0
     # res = []
