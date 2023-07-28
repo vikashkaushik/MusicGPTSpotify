@@ -7,7 +7,7 @@ import time
 import openai
 import json
 
-openai.api_key = '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'
+openai.api_key = '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'
 app = Flask(__name__)
 
 app.secret_key = "fdskjfdsnsdk"
@@ -177,6 +177,49 @@ def getRecs(**kwargs):
 
 
     
+def addToPlaylist(**kwargs):
+    print("goes in playlist")
+    if(not kwargs.get("time_range")):
+        time_range = "medium_term"
+    else:
+        time_range = kwargs.get("time_range")
+    
+    if(not kwargs.get("limit")):
+        limit = 5
+    else:
+        limit = kwargs.get("limit")
+        
+    
+    
+
+    try:
+        token_info = get_token()
+    except:
+        print("user not logged in")
+        #redirect("/")
+        return redirect(url_for('login', _external=False))
+    
+    sp = spotipy.Spotify(auth=token_info['access_token'])
+
+    playlist_id = []
+    song_id = []
+    if(kwargs.get("playlist")):
+        print("GOES IN PLAYLIST FINDER")
+        givenPlaylist = kwargs.get("playlist")
+        search_result = sp.search(q='playlist:' + givenPlaylist, type='playlist', limit=1)
+        # Check if any artist matches the search query
+        if 'playlists' in search_result and search_result['playlists']['items']:
+            playlist_id = search_result['playlists']['items'][0]['id']
+    elif(kwargs.get("songs")):
+        print("GOES IN SONG FINDER")
+        givenSong = kwargs.get("songs")
+        search_result = sp.search(q='track:' + givenSong, type='track', limit=1)
+        if 'tracks' in search_result and search_result['tracks']['items']:
+            song_id = search_result['tracks']['items'][0]['id']
+        
+    sp.user_playlist_add_tracks("6b7d1l6gp9d374xkuxlbu454j", playlist_id, [song_id])
+
+
     # count = 0
     # res = []
     # while count < 5:
@@ -228,6 +271,30 @@ def getMessage():
 
         },
         {
+            "name": "addToPlaylist",
+            "description": "Add the given song to the given playlist",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "limit": {
+                        "type": "integer",
+                        "description": "The number of tracks the user wants to display",
+                        "defaultValue": 20
+                    },
+                    "playlist": {
+                        "type": "string",
+                        "description": "The name of the playlist that the given song will be added to"
+                    },
+                     "songs": {
+                        "type": "string",
+                        "description": "The song that needs to be added to the given playlist"
+                    },
+                    
+                }
+            },
+
+        },
+        {
             "name": "getRecommendations",
             "description": "Gets recommendations for the user based on his top songs",
             "parameters": {
@@ -267,7 +334,8 @@ def getMessage():
         available_functions = {
             "getTopItems": getTopItems,
             "getSavedTracks": getSavedTracks,
-            "getRecommendations": getRecs
+            "getRecommendations": getRecs,
+            "addToPlaylist": addToPlaylist
         }  # only one function in this example, but you can have multiple
         function_name = response_message["function_call"]["name"]
         function_to_call = available_functions[function_name]
@@ -342,7 +410,7 @@ def create_spotify_oauth():
         client_id="6ccc82325a60410c9d0bbc5a7014537e",
           client_secret="5cac035e1acb4ba4acc94f014ee768ad",
             redirect_uri=url_for('redirectPage', _external=True),
-              scope="user-library-read user-top-read"
+              scope="user-library-read user-top-read playlist-modify-public playlist-modify-private"
     )
 # # Create a playlist  
 # playlist_name = "My new playlist"  
