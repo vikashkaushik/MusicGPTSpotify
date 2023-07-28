@@ -7,7 +7,7 @@ import time
 import openai
 import json
 
-openai.api_key = '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'
+openai.api_key = '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'
 app = Flask(__name__)
 
 app.secret_key = "fdskjfdsnsdk"
@@ -74,6 +74,7 @@ def getTopItems(**kwargs):
     return json.dumps(top_songs)
 
 def getRecs(**kwargs):
+    print("goes in recs")
     if(not kwargs.get("time_range")):
         time_range = "medium_term"
     else:
@@ -83,6 +84,8 @@ def getRecs(**kwargs):
         limit = 5
     else:
         limit = kwargs.get("limit")
+        
+    
     
 
     try:
@@ -118,16 +121,42 @@ def getRecs(**kwargs):
     top_artists = []
     top_tracks = []
     iteration = 0
-    while True:
-        top_artists.append(sp.current_user_top_artists(limit, 0, time_range)['items'][iteration]['id'])
-        top_tracks.append(sp.current_user_top_tracks(limit, 0, time_range)['items'][iteration]['id'])
-        iteration +=1
-        if(iteration >= 2):
-            break
-    
-    # top_artists = sp.current_user_top_artists(limit, 0, time_range)['items']
-    # top_tracks = sp.current_user_top_tracks(limit, 0, time_range)['items']
-    genre_ids = sp.recommendation_genre_seeds()
+    genre_ids = []
+    if(not kwargs.get("artists") and not kwargs.get("songs")):
+        print("GOES IN HARD")
+        while True:
+            top_artists.append(sp.current_user_top_artists(limit, 0, time_range)['items'][iteration]['id'])
+            top_tracks.append(sp.current_user_top_tracks(limit, 0, time_range)['items'][iteration]['id'])
+            iteration +=1
+            if(iteration >= 2):
+                break
+        
+        # top_artists = sp.current_user_top_artists(limit, 0, time_range)['items']
+        # top_tracks = sp.current_user_top_tracks(limit, 0, time_range)['items']
+        genre_ids = sp.recommendation_genre_seeds()
+    else:
+        
+        # top_artists = sp.current_user_top_artists(limit, 0, time_range)['items']
+        # top_tracks = sp.current_user_top_tracks(limit, 0, time_range)['items']
+        # Search for the artist by name
+        
+        if(kwargs.get("artists")):
+            print("GOES IN ARTIST RECO")
+            givenArtist = kwargs.get("artists")
+            search_result = sp.search(q='artist:' + givenArtist, type='artist', limit=1)
+            # Check if any artist matches the search query
+            if search_result['artists']['items']:
+                artist_id = search_result['artists']['items'][0]['id']
+                top_artists.append(artist_id)
+        elif(kwargs.get("songs")):
+            print("GOES IN SONG RECO")
+            givenSong = kwargs.get("songs")
+            search_result = sp.search(q='track:' + givenSong, type='track', limit=1)
+            if search_result['tracks']['items']:
+                song_id = search_result['tracks']['items'][0]['id']
+                top_tracks.append(song_id)
+        
+            
     
     items = sp.recommendations(
         seed_artists=top_artists,
@@ -143,6 +172,7 @@ def getRecs(**kwargs):
         count += 1
     
     return json.dumps(recommendationsArray)
+
 
 
 
@@ -205,13 +235,17 @@ def getMessage():
                 "properties": {
                     
                     "time_range": {"type": "string", "enum": ["long_term", "medium_term", "short_term"], "defaultValue": "medium_term"},
+                    "artists": {
+                        "type": "string",
+                        "description": "The artist given that the recommendation is going to be based on"
+                    },
+                     "songs": {
+                        "type": "string",
+                        "description": "The song given that the recommendation is going to be based on"
+                    },
                     "limit": {
                         "type": "integer",
                         "description": "The number of seed items the user wants to get recommendations based on"
-                    },
-                    "genres": {
-                        "type": "string",
-                        "description": "The genres that the user wants to get recommendations of"
                     }
                 }
             }
@@ -305,8 +339,8 @@ def get_token():
 
 def create_spotify_oauth():
     return SpotifyOAuth(
-        client_id="04dd3a00e6a04c8ab85ca26fd6477f72",
-          client_secret="2bbff5ae6b4a4d1a83144a4983a693d9",
+        client_id="6ccc82325a60410c9d0bbc5a7014537e",
+          client_secret="5cac035e1acb4ba4acc94f014ee768ad",
             redirect_uri=url_for('redirectPage', _external=True),
               scope="user-library-read user-top-read"
     )
