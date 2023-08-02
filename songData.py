@@ -7,7 +7,7 @@ import time
 import openai
 import json
 
-openai.api_key = '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'
+openai.api_key = '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'
 app = Flask(__name__)
 
 app.secret_key = "fdskjfdsnsdk"
@@ -206,18 +206,34 @@ def addToPlaylist(**kwargs):
     if(kwargs.get("playlist")):
         print("GOES IN PLAYLIST FINDER")
         givenPlaylist = kwargs.get("playlist")
-        search_result = sp.search(q='playlist:' + givenPlaylist, type='playlist', limit=1)
+        # search_result = sp.search(q='playlist:' + givenPlaylist, type='playlist', limit=1)
+        # print(search_result)
         # Check if any artist matches the search query
-        if 'playlists' in search_result and search_result['playlists']['items']:
-            playlist_id = search_result['playlists']['items'][0]['id']
-    elif(kwargs.get("songs")):
+        # if 'playlists' in search_result and search_result['playlists']['items']:
+        #     print("TREEEE")
+        #     playlist_id = search_result['playlists']['items'][0]['id']
+        allPlaylists = sp.current_user_playlists(limit=50, offset= 0)
+        length = len(allPlaylists)
+        print(length)
+        for playlist in allPlaylists['items']:
+            print(playlist['name'])
+            if playlist['name'] == givenPlaylist:
+                playlist_id = playlist['id']
+                print("FOUNNNNND")
+                break
+        if not playlist_id:
+            return "No playlist found"
+    if(kwargs.get("songs")):
         print("GOES IN SONG FINDER")
         givenSong = kwargs.get("songs")
         search_result = sp.search(q='track:' + givenSong, type='track', limit=1)
         if 'tracks' in search_result and search_result['tracks']['items']:
             song_id = search_result['tracks']['items'][0]['id']
-        
+    print(playlist_id)    
+    print(song_id)  
+    # playlist_id = "7ud3w7JnY8yXea63EPB5dj"
     if playlist_id and song_id:
+        print("GOES IN HARDER")
         sp.user_playlist_add_tracks("6b7d1l6gp9d374xkuxlbu454j", playlist_id, [song_id])
         return "The song has been added to the playlist successfully."
 
@@ -415,7 +431,7 @@ def create_spotify_oauth():
         client_id="6ccc82325a60410c9d0bbc5a7014537e",
           client_secret="5cac035e1acb4ba4acc94f014ee768ad",
             redirect_uri=url_for('redirectPage', _external=True),
-              scope="user-library-read user-top-read playlist-modify-public playlist-modify-private"
+              scope="user-library-read user-top-read playlist-modify-public playlist-modify-private playlist-read-private playlist-read-collaborative"
     )
 # # Create a playlist  
 # playlist_name = "My new playlist"  
