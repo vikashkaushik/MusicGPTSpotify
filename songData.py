@@ -7,7 +7,7 @@ import time
 import openai
 import json
 
-openai.api_key = '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'
+openai.api_key = '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'
 app = Flask(__name__)
 
 app.secret_key = "fdskjfdsnsdk"

@@ -45,7 +45,10 @@
     }
 
     async function getMessage(){
-
+        const userMessageElement = document.createElement('p');
+        userMessageElement.textContent = inputElement.value;
+        userMessageElement.addEventListener('click', () => changeInput(userMessageElement.textContent));
+        historyElement.append(userMessageElement);
         $.ajax({
             url: '/getMessage',
             type: 'POST',
@@ -108,12 +111,12 @@
         
             
 
-        if(outPutElement.textContent && inputElement.value){
-            const pElement = document.createElement('p')
-            pElement.textContent = inputElement.value
-            pElement.addEventListener('click', () => changeInput(pElement.textContent))
-            historyElement.append(pElement)
-        }
+        // if(outPutElement.textContent && inputElement.value){
+        //     const pElement = document.createElement('p')
+        //     pElement.textContent = inputElement.value
+        //     pElement.addEventListener('click', () => changeInput(pElement.textContent))
+        //     historyElement.append(pElement)
+        // }
         // } catch (error){
         //     console.error(error)
         // }
